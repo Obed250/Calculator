@@ -129,7 +129,6 @@
         .equals { background-color: var(--accent-color); color: white; grid-column: span 2;}
         .clear { background-color: var(--danger-color); }
 
-        /* AI Assistant Panel */
         .ai-panel {
             margin-top: 10px;
             background: #1e1b4b;
@@ -153,7 +152,7 @@
         #ai-output {
             font-size: 0.75rem;
             color: #d8b4fe;
-            max-height: 120px;
+            max-height: 150px;
             overflow-y: auto;
             white-space: pre-wrap;
             border-top: 1px solid #4338ca;
@@ -188,22 +187,21 @@
 
     <div class="calculator">
         <div class="display-container">
-            <div id="history">EE READY...</div>
+            <div id="history">Ready</div>
             <div id="display">0</div>
         </div>
 
-        <span class="section-label">✨ Gemini AI Assistant</span>
+        <span class="section-label">✨ AI Assistant</span>
         <div class="ai-panel">
-            <textarea id="ai-input" placeholder="e.g., 'Explain the voltage divider formula' or 'Design a 1kHz RC filter'..." rows="2"></textarea>
+            <textarea id="ai-input" placeholder="Ask anything..." rows="2"></textarea>
             <div style="display: flex; gap: 8px; align-items: center;">
-                <button class="ai-btn" onclick="askGemini('solve')">✨ Solve Problem</button>
-                <button class="ai-btn" onclick="askGemini('suggest')">✨ Component Help</button>
+                <button class="ai-btn" onclick="askGemini('solve')">✨ Ask</button>
                 <div id="ai-loader" class="loader"></div>
             </div>
             <div id="ai-output"></div>
         </div>
 
-        <span class="section-label">EE Constants & Functions</span>
+        <span class="section-label">Constants & Functions</span>
         <div class="grid-ee">
             <button class="constant" onclick="appendNumber(Math.PI.toFixed(6))">π</button>
             <button class="constant" onclick="appendNumber('8.854e-12')">ε₀</button>
@@ -239,12 +237,12 @@
             
             <button data-key="0" onclick="appendNumber('0')">0</button>
             <button data-key="." onclick="appendNumber('.')">.</button>
-            <button class="equals" data-key="=" onclick="calculate()">EXE</button>
+            <button class="equals" data-key="=" onclick="calculate()">Enter</button>
         </div>
     </div>
 
     <script>
-        const apiKey = ""; // Set at runtime
+        const apiKey = ""; // Runtime key
         const display = document.getElementById('display');
         const historyDisplay = document.getElementById('history');
         const aiOutput = document.getElementById('ai-output');
@@ -257,6 +255,7 @@
         let shouldResetScreen = false;
 
         async function fetchWithRetry(url, payload, retries = 5) {
+            let lastError;
             for (let i = 0; i < retries; i++) {
                 try {
                     const response = await fetch(url, {
@@ -264,11 +263,18 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
-                    if (response.ok) return await response.json();
-                } catch (err) {}
+                    
+                    const data = await response.json();
+                    if (response.ok) return data;
+                    
+                    lastError = data.error?.message || response.statusText;
+                } catch (err) {
+                    lastError = err.message;
+                }
+                // Exponential backoff
                 await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)));
             }
-            throw new Error("Failed to connect after multiple retries.");
+            throw new Error(lastError || "Unknown connection error");
         }
 
         async function askGemini(mode) {
@@ -277,28 +283,39 @@
             
             let userPrompt = "";
             if (mode === 'solve') {
-                if (!query) return alert("Please type your problem in the AI text area.");
-                userPrompt = `As an Electrical Engineering expert, solve this: ${query}. Use LaTeX for formulas.`;
+                if (!query) {
+                    aiOutput.style.display = 'block';
+                    aiOutput.innerText = "Please enter a question first.";
+                    return;
+                }
+                userPrompt = `Electrical Engineering Problem: ${query}. Solve precisely with formulas.`;
             } else {
-                userPrompt = `The current value on my calculator is ${calcValue}. Explain its significance in electronics or suggest standard component values (E24/E96 series) that match it.`;
+                userPrompt = `The current value on my calculator is ${calcValue}. Explain what this could represent in electronics (e.g., standard resistor, capacitor, frequency) and suggest related parts.`;
             }
 
             aiLoader.style.display = 'block';
             aiOutput.style.display = 'block';
-            aiOutput.innerText = "Processing Engineering Query...";
+            aiOutput.innerText = "Thinking...";
 
             try {
+                // Using the specific model supported by the environment
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
                 const payload = {
                     contents: [{ parts: [{ text: userPrompt }] }],
-                    systemInstruction: { parts: [{ text: "You are a specialized Electrical Engineering AI. Be precise, technical, and use LaTeX for math notation." }] }
+                    systemInstruction: { parts: [{ text: "You are a professional Electrical Engineer. Provide concise, accurate technical help. Use standard units and engineering notation." }] }
                 };
 
                 const result = await fetchWithRetry(url, payload);
                 const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                aiOutput.innerText = text || "No response.";
+                
+                if (text) {
+                    aiOutput.innerText = text;
+                } else {
+                    aiOutput.innerText = "The AI returned an empty response. Please try rephrasing.";
+                }
             } catch (error) {
-                aiOutput.innerText = "Error: Could not reach AI service. Please check your connection.";
+                aiOutput.innerText = `AI Connection Failed: ${error.message}`;
+                console.error("Gemini Error:", error);
             } finally {
                 aiLoader.style.display = 'none';
             }
@@ -345,6 +362,7 @@
 
         function eeFunction(type) {
             let val = parseFloat(currentInput);
+            if (isNaN(val)) return;
             let res = 0;
             switch(type) {
                 case 'sqrt': res = Math.sqrt(val); break;
@@ -384,7 +402,7 @@
         }
 
         document.addEventListener('keydown', (e) => {
-            if (document.activeElement.id === 'ai-input') return;
+            if (document.activeElement.tagName === 'TEXTAREA') return;
             const keyMap = { 'Enter': '=', 'Escape': 'Escape', 'Backspace': 'Backspace' };
             const key = keyMap[e.key] || e.key;
             if (key >= '0' && key <= '9') appendNumber(key);
