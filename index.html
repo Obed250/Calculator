@@ -3,30 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Calculator</title>
+    <title>EE Pro Calculator + AI</title>
+    
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="description" content="Professional Electrical Engineering Scientific Calculator with Gemini AI">
+    <link rel="manifest" href="data:application/manifest+json,{'name':'EE Calc AI','short_name':'EEAI','start_url':'.','display':'standalone','background_color':'#0f172a','theme_color':'#38bdf8'}">
+
     <style>
         :root {
-            --bg-color: #f3f4f6;
-            --calc-bg: #1f2937;
-            --screen-bg: #374151;
-            --text-main: #f9fafb;
-            --text-secondary: #9ca3af;
-            --btn-bg: #4b5563;
-            --btn-hover: #6b7280;
-            --btn-active: #374151;
-            --accent-color: #3b82f6;
-            --accent-hover: #2563eb;
-            --operator-color: #f59e0b;
-            --operator-hover: #d97706;
-            --danger-color: #ef4444;
-            --danger-hover: #dc2626;
+            --bg-color: #020617;
+            --calc-bg: #0f172a;
+            --screen-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-secondary: #7dd3fc;
+            --btn-bg: #334155;
+            --btn-hover: #475569;
+            --btn-active: #1e293b;
+            --accent-color: #0ea5e9;
+            --operator-color: #334155;
+            --ee-function-color: #1e40af;
+            --danger-color: #be123c;
+            --ai-accent: #a855f7;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Consolas', 'Monaco', monospace;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -35,143 +41,185 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            padding: 20px;
+            overflow-y: auto;
         }
 
         .calculator {
             background-color: var(--calc-bg);
-            border-radius: 20px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            padding: 20px;
-            width: 320px;
-            max-width: 90vw;
-            animation: fadeIn 0.5s ease-out forwards;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            padding: 24px;
+            width: 450px;
+            max-width: 100%;
         }
 
         .display-container {
             background-color: var(--screen-bg);
-            border-radius: 10px;
-            padding: 15px;
+            border-radius: 6px;
+            padding: 16px;
             margin-bottom: 20px;
             text-align: right;
-            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+            border-left: 4px solid var(--accent-color);
         }
 
         #history {
             color: var(--text-secondary);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             min-height: 1.2rem;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
             overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
+            letter-spacing: 1px;
         }
 
         #display {
             color: var(--text-main);
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             font-weight: bold;
             overflow-x: auto;
             white-space: nowrap;
-            /* Hide scrollbar for Chrome, Safari and Opera */
-            scrollbar-width: none; /* Firefox */
+            scrollbar-width: none;
         }
 
-        #display::-webkit-scrollbar {
-            display: none;
+        .section-label {
+            color: var(--text-secondary);
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            margin: 15px 0 8px 0;
+            display: block;
+            font-weight: bold;
+            letter-spacing: 2px;
         }
 
-        .buttons {
+        .grid-ee {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
+            gap: 8px;
+        }
+
+        .grid-standard {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
         }
 
         button {
             border: none;
-            border-radius: 10px;
-            padding: 15px;
-            font-size: 1.25rem;
+            border-radius: 4px;
+            padding: 12px 5px;
+            font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.1s;
             background-color: var(--btn-bg);
             color: var(--text-main);
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
         }
 
-        button:hover {
-            background-color: var(--btn-hover);
-            transform: translateY(-2px);
-        }
-
-        /* Active state for mouse clicks and keyboard presses */
+        button.ee-fn { background-color: var(--ee-function-color); color: #bae6fd; }
+        button.constant { background-color: #0f172a; border: 1px solid #334155; color: #94a3b8; }
+        button.ai-btn { background-color: var(--ai-accent); color: white; border: none; font-size: 0.8rem; flex: 1; }
+        
         button:active, button.pressed {
-            background-color: var(--btn-active);
-            transform: translateY(0);
+            transform: scale(0.95);
+            filter: brightness(1.2);
         }
 
-        .span-2 {
-            grid-column: span 2;
+        .operator { background-color: var(--operator-color); }
+        .equals { background-color: var(--accent-color); color: white; grid-column: span 2;}
+        .clear { background-color: var(--danger-color); }
+
+        /* AI Assistant Panel */
+        .ai-panel {
+            margin-top: 10px;
+            background: #1e1b4b;
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid var(--ai-accent);
         }
 
-        .operator {
-            background-color: var(--operator-color);
+        #ai-input {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid var(--ai-accent);
             color: white;
+            padding: 8px;
+            font-size: 0.8rem;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            resize: none;
         }
 
-        .operator:hover {
-            background-color: var(--operator-hover);
-        }
-        
-        .operator.pressed {
-            background-color: var(--operator-hover);
-        }
-
-        .equals {
-            background-color: var(--accent-color);
-            color: white;
-        }
-
-        .equals:hover {
-            background-color: var(--accent-hover);
-        }
-        
-        .equals.pressed {
-            background-color: var(--accent-hover);
+        #ai-output {
+            font-size: 0.75rem;
+            color: #d8b4fe;
+            max-height: 120px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            border-top: 1px solid #4338ca;
+            padding-top: 8px;
+            margin-top: 8px;
+            display: none;
         }
 
-        .clear, .delete {
-            background-color: var(--danger-color);
-            color: white;
+        .loader {
+            display: none;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #FFF;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            animation: rotation 1s linear infinite;
         }
 
-        .clear:hover, .delete:hover {
-            background-color: var(--danger-hover);
-        }
-        
-        .clear.pressed, .delete.pressed {
-            background-color: var(--danger-hover);
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
-        /* Fade in animation */
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
         }
+        .calculator { animation: fadeIn 0.3s ease-out; }
     </style>
 </head>
 <body>
 
     <div class="calculator">
         <div class="display-container">
-            <div id="history"></div>
+            <div id="history">EE READY...</div>
             <div id="display">0</div>
         </div>
-        <div class="buttons">
+
+        <span class="section-label">✨ Gemini AI Assistant</span>
+        <div class="ai-panel">
+            <textarea id="ai-input" placeholder="e.g., 'Explain the voltage divider formula' or 'Design a 1kHz RC filter'..." rows="2"></textarea>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="ai-btn" onclick="askGemini('solve')">✨ Solve Problem</button>
+                <button class="ai-btn" onclick="askGemini('suggest')">✨ Component Help</button>
+                <div id="ai-loader" class="loader"></div>
+            </div>
+            <div id="ai-output"></div>
+        </div>
+
+        <span class="section-label">EE Constants & Functions</span>
+        <div class="grid-ee">
+            <button class="constant" onclick="appendNumber(Math.PI.toFixed(6))">π</button>
+            <button class="constant" onclick="appendNumber('8.854e-12')">ε₀</button>
+            <button class="constant" onclick="appendNumber('1.256e-6')">μ₀</button>
+            <button class="constant" onclick="appendNumber('1.602e-19')">qₑ</button>
+            <button class="ee-fn" onclick="eeFunction('sqrt')">√x</button>
+            <button class="ee-fn" onclick="eeFunction('pow')">x²</button>
+            <button class="ee-fn" onclick="eeFunction('inv')">1/x</button>
+            <button class="ee-fn" onclick="eeFunction('log')">log</button>
+        </div>
+
+        <span class="section-label">Calculations</span>
+        <div class="grid-standard">
             <button class="clear" data-key="Escape" onclick="clearDisplay()">AC</button>
-            <button class="delete" data-key="Backspace" onclick="deleteLast()">DEL</button>
-            <button class="operator" data-key="%" onclick="appendOperator('%')">%</button>
+            <button class="operator" data-key="Backspace" onclick="deleteLast()">DEL</button>
+            <button class="operator" onclick="appendNumber('e')">EXP</button>
             <button class="operator" data-key="/" onclick="appendOperator('/')">÷</button>
             
             <button data-key="7" onclick="appendNumber('7')">7</button>
@@ -189,20 +237,72 @@
             <button data-key="3" onclick="appendNumber('3')">3</button>
             <button class="operator" data-key="+" onclick="appendOperator('+')">+</button>
             
-            <button class="span-2" data-key="0" onclick="appendNumber('0')">0</button>
+            <button data-key="0" onclick="appendNumber('0')">0</button>
             <button data-key="." onclick="appendNumber('.')">.</button>
-            <button class="equals" data-key="=" onclick="calculate()">=</button>
+            <button class="equals" data-key="=" onclick="calculate()">EXE</button>
         </div>
     </div>
 
     <script>
+        const apiKey = ""; // Set at runtime
         const display = document.getElementById('display');
         const historyDisplay = document.getElementById('history');
+        const aiOutput = document.getElementById('ai-output');
+        const aiInput = document.getElementById('ai-input');
+        const aiLoader = document.getElementById('ai-loader');
         
         let currentInput = '0';
         let previousInput = '';
         let operation = null;
         let shouldResetScreen = false;
+
+        async function fetchWithRetry(url, payload, retries = 5) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (response.ok) return await response.json();
+                } catch (err) {}
+                await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)));
+            }
+            throw new Error("Failed to connect after multiple retries.");
+        }
+
+        async function askGemini(mode) {
+            const query = aiInput.value.trim();
+            const calcValue = display.innerText;
+            
+            let userPrompt = "";
+            if (mode === 'solve') {
+                if (!query) return alert("Please type your problem in the AI text area.");
+                userPrompt = `As an Electrical Engineering expert, solve this: ${query}. Use LaTeX for formulas.`;
+            } else {
+                userPrompt = `The current value on my calculator is ${calcValue}. Explain its significance in electronics or suggest standard component values (E24/E96 series) that match it.`;
+            }
+
+            aiLoader.style.display = 'block';
+            aiOutput.style.display = 'block';
+            aiOutput.innerText = "Processing Engineering Query...";
+
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                const payload = {
+                    contents: [{ parts: [{ text: userPrompt }] }],
+                    systemInstruction: { parts: [{ text: "You are a specialized Electrical Engineering AI. Be precise, technical, and use LaTeX for math notation." }] }
+                };
+
+                const result = await fetchWithRetry(url, payload);
+                const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                aiOutput.innerText = text || "No response.";
+            } catch (error) {
+                aiOutput.innerText = "Error: Could not reach AI service. Please check your connection.";
+            } finally {
+                aiLoader.style.display = 'none';
+            }
+        }
 
         function updateDisplay() {
             display.innerText = currentInput;
@@ -213,22 +313,19 @@
             currentInput = '0';
             previousInput = '';
             operation = null;
-            historyDisplay.innerText = '';
+            historyDisplay.innerText = 'EE READY...';
+            aiOutput.style.display = 'none';
             updateDisplay();
         }
 
         function deleteLast() {
-            if (shouldResetScreen) return;
-            if (currentInput.length === 1 || currentInput === 'Error') {
-                currentInput = '0';
-            } else {
-                currentInput = currentInput.slice(0, -1);
-            }
+            if (currentInput === '0' || shouldResetScreen) return;
+            currentInput = currentInput.length > 1 ? currentInput.slice(0, -1) : '0';
             updateDisplay();
         }
 
         function appendNumber(number) {
-            if (currentInput === '0' || shouldResetScreen || currentInput === 'Error') {
+            if (currentInput === '0' || shouldResetScreen) {
                 currentInput = number;
                 shouldResetScreen = false;
             } else {
@@ -239,109 +336,63 @@
         }
 
         function appendOperator(operator) {
-            if (currentInput === 'Error') return;
-            if (operation !== null) calculate();
+            if (operation !== null && !shouldResetScreen) calculate();
             previousInput = currentInput;
             operation = operator;
             shouldResetScreen = true;
-            
-            let displayOperator = operator;
-            if(operator === '*') displayOperator = '×';
-            if(operator === '/') displayOperator = '÷';
-            if(operator === '-') displayOperator = '−';
-            
-            historyDisplay.innerText = `${previousInput} ${displayOperator}`;
+            historyDisplay.innerText = `${previousInput} ${operator}`;
+        }
+
+        function eeFunction(type) {
+            let val = parseFloat(currentInput);
+            let res = 0;
+            switch(type) {
+                case 'sqrt': res = Math.sqrt(val); break;
+                case 'pow': res = Math.pow(val, 2); break;
+                case 'inv': res = 1/val; break;
+                case 'log': res = Math.log10(val); break;
+            }
+            currentInput = Math.abs(res) < 0.001 || Math.abs(res) > 100000 ? res.toExponential(5) : parseFloat(res.toFixed(8)).toString();
+            shouldResetScreen = true;
+            updateDisplay();
         }
 
         function calculate() {
             if (operation === null || shouldResetScreen) return;
-            
-            let computation;
+            let result;
             const prev = parseFloat(previousInput);
             const current = parseFloat(currentInput);
-            
             if (isNaN(prev) || isNaN(current)) return;
 
             switch (operation) {
-                case '+':
-                    computation = prev + current;
-                    break;
-                case '-':
-                    computation = prev - current;
-                    break;
-                case '*':
-                    computation = prev * current;
-                    break;
-                case '/':
-                    if (current === 0) {
-                        currentInput = 'Error';
-                        updateDisplay();
-                        shouldResetScreen = true;
-                        operation = null;
-                        historyDisplay.innerText = '';
-                        return;
-                    }
-                    computation = prev / current;
-                    break;
-                case '%':
-                    computation = prev % current;
-                    break;
-                default:
-                    return;
+                case '+': result = prev + current; break;
+                case '-': result = prev - current; break;
+                case '*': result = prev * current; break;
+                case '/': result = current === 0 ? "DIV ERROR" : prev / current; break;
+                default: return;
             }
 
-            // Round to avoid floating point issues
-            computation = Math.round(computation * 100000000) / 100000000;
-            
-            // Show full equation history
-            let displayOperator = operation;
-            if(operation === '*') displayOperator = '×';
-            if(operation === '/') displayOperator = '÷';
-            if(operation === '-') displayOperator = '−';
-            historyDisplay.innerText = `${previousInput} ${displayOperator} ${currentInput} =`;
-
-            currentInput = computation.toString();
+            historyDisplay.innerText = `${previousInput} ${operation} ${currentInput} =`;
+            if (typeof result === 'number') {
+                currentInput = Math.abs(result) < 0.001 || Math.abs(result) > 100000 ? result.toExponential(5) : (Math.round(result * 100000000) / 100000000).toString();
+            } else {
+                currentInput = result;
+            }
             operation = null;
             shouldResetScreen = true;
             updateDisplay();
         }
 
-        // Visual feedback helper
-        function highlightButton(key) {
-            const button = document.querySelector(`button[data-key="${key}"]`);
-            if (button) {
-                button.classList.add('pressed');
-                setTimeout(() => button.classList.remove('pressed'), 100);
-            }
-        }
-
-        // Keyboard Support
         document.addEventListener('keydown', (e) => {
-            if (e.key >= '0' && e.key <= '9') {
-                appendNumber(e.key);
-                highlightButton(e.key);
-            }
-            if (e.key === '.') {
-                appendNumber('.');
-                highlightButton('.');
-            }
-            if (e.key === '=' || e.key === 'Enter') {
-                e.preventDefault();
-                calculate();
-                highlightButton('=');
-            }
-            if (e.key === 'Backspace') {
-                deleteLast();
-                highlightButton('Backspace');
-            }
-            if (e.key === 'Escape') {
-                clearDisplay();
-                highlightButton('Escape');
-            }
-            if (e.key === '+' || e.key === '-' || e.key === '*' || e.key === '/' || e.key === '%') {
-                appendOperator(e.key);
-                highlightButton(e.key);
-            }
+            if (document.activeElement.id === 'ai-input') return;
+            const keyMap = { 'Enter': '=', 'Escape': 'Escape', 'Backspace': 'Backspace' };
+            const key = keyMap[e.key] || e.key;
+            if (key >= '0' && key <= '9') appendNumber(key);
+            if (key === '.') appendNumber('.');
+            if (key === '=') calculate();
+            if (key === 'Backspace') deleteLast();
+            if (key === 'Escape') clearDisplay();
+            if (['+', '-', '*', '/'].includes(key)) appendOperator(key);
         });
     </script>
 </body>
